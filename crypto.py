@@ -142,10 +142,3 @@ model.fit(trainInputs, trainTargets,validation_data=(testInputs, testTargets),ep
 
 
 model.save('cryptoPrediction.model')
-
-
-# In[ ]:
-
-
-get_ipython().system('jupyter nbconvert')
-
