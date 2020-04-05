@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -11,59 +8,18 @@ import random
 from sklearn import preprocessing
 import collections
 
-
-# In[2]:
-
-
 look_back_period = 30
 future_look_period = 3
 
-
-# In[3]:
-
-
 data = pd.read_csv('ETH-USD.csv', names='time low high open close volume'.split())
-
-
-# In[4]:
-
-
 data.set_index('time', inplace = True)
 
-
-# In[5]:
-
-
 data.sort_index(inplace = True)
-
-
-# In[6]:
-
-
-data = data[['close','volume']] 
-
-
-# In[7]:
-
-
+data = data[['close','volume']]
 data['future_value'] = data['close'].shift(-future_look_period)
 data.dropna(inplace = True)
-
-
-# In[8]:
-
-
 data['target'] = data.apply(lambda row : 1 if (row['future_value'] >  row['close']) else 0, axis = 1) 
-
-
-# In[9]:
-
-
 trainSet, testSet,_ = np.split(data,[int(0.95*len(data)),len(data)])
-
-
-# In[10]:
-
 
 def preprocess_data(data_pre):
     data_pre.drop('future_value',axis = 1)
@@ -97,43 +53,26 @@ def preprocess_data(data_pre):
     for seq, target in final_sequence:
         inputs.append(seq)
         decision.append(target)
-    return np.array(inputs), decision
+    return np.array(inputs), np.array(decision)
 
+trainInputs, trainTargets = preprocess_data(trainSet)
+testInputs, testTargets = preprocess_data(testSet)
 
-# In[11]:
+model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(128, activation='tanh', recurrent_activation='sigmoid',return_sequences=True,dropout=0.2,input_shape = trainInputs.shape[1:]),
+        tf.keras.layers.LSTM(128, activation='tanh', recurrent_activation='sigmoid',return_sequences=True,dropout=0.2),
+        tf.keras.layers.LSTM(128, activation='tanh', recurrent_activation='sigmoid',return_sequences=False,dropout=0.2),
+        tf.keras.layers.Dense(64,activation='relu'),
+        tf.keras.layers.Dense(32,activation='relu'),
+        tf.keras.layers.Dense(2,activation='softmax')
+])
 
+model.compile(loss='sparse_categorical_crossentropy',
+              optmizer='adam',
+              metrics=['accuracy']
+             )
 
-a, b = preprocess_data(trainSet)
-a.shape
+model.fit(trainInputs, trainTargets,validation_data=(testInputs, testTargets),epochs=5,batch_size=40)
 
-
-# In[12]:
-
-
-a, b = preprocess_data(testSet)
-a.shape
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-get_ipython().system('jupyter nbconvert --to script crypto.ipynb')
+model.save('cryptoPrediction.model')
 
